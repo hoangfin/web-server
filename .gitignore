@@ -35,3 +35,4 @@ webserv
 
 .DS_Store
 .vscode/
+test.cpp

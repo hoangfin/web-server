@@ -1,50 +1,46 @@
-import cgi
+#!/usr/bin/env python3
 import os
+import sys
+import urllib.parse
 
-print("HTTP/1.1 200 OK")
-print("Content-type: text/html\n")
+def handle_get():
+    """Handles GET requests by reading the query string."""
+    query_string = os.environ.get("QUERY_STRING", "")
+    params = urllib.parse.parse_qs(query_string)
+    name = params.get("name", ["Guest"])[0]
 
-# Handle form data
-form = cgi.FieldStorage()
+    return f"<h1>GET Request Received</h1><p>Hello, {name}!</p>"
 
-if os.environ["REQUEST_METHOD"] == "POST":
-    name = form.getvalue("name")
-elif os.environ["REQUEST_METHOD"] == "GET":
-    name = form.getvalue("name", "World")
+def handle_post():
+    """Handles POST requests by reading the request body."""
+    content_length = int(os.environ.get("CONTENT_LENGTH", 0))
+    post_data = sys.stdin.read(content_length) if content_length > 0 else ""
+    params = urllib.parse.parse_qs(post_data)
+    name = params.get("name", ["Guest"])[0]
 
-print(f"""
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Moving Gradient</title>
-        <style>
-            body {{
-                margin: 0;
-                height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-family: Arial, sans-serif;
-                background: linear-gradient(45deg, #ff9a9e, #fad0c4, #fbc2eb, #a18cd1);
-                background-size: 400% 400%;
-                animation: gradientBackground 10s ease infinite;
-            }}
+    return f"<h1>POST Request Received</h1><p>Hello, {name}!</p>"
 
-            @keyframes gradientBackground {{
-                0% {{
-                    background-position: 0% 50%;
-                }}
-                50% {{
-                    background-position: 100% 50%;
-                }}
-                100% {{
-                    background-position: 0% 50%;
-                }}
-            }}
-        </style>
-    </head>
-    <body>
-        <h1>Hello, {name}!</h1>
-    </body>
-</html>
-""")
+def main():
+    """Determines request type and processes it accordingly."""
+    try:
+        request_method = os.environ.get("REQUEST_METHOD", "GET")
+
+        if request_method == "GET":
+            response_body = handle_get()
+        elif request_method == "POST":
+            response_body = handle_post()
+        else:
+            response_body = "<h1>405 Method Not Allowed</h1>"
+            print(response_body)
+            return
+
+        # Send HTTP response
+        print(f"<html><body>{response_body}</body></html>")
+
+    except Exception as e:
+        # Log error and return 500 status
+        sys.stderr.write(f"CGI Error: {str(e)}\n")
+        print("<html><body><h1>Internal Server Error</h1></body></html>")
+
+if __name__ == "__main__":
+    main()

@@ -25,6 +25,7 @@ namespace http {
 			Request(const Request&) = default;
 			Request(Request&&) noexcept = default;
 			~Request() = default;
+
 			Request& operator=(const Request&) = default;
 			Request& operator=(Request&&) noexcept = default;
 
@@ -32,6 +33,8 @@ namespace http {
 
 			bool isChunkEncoding() const;
 			bool isMultipart() const;
+
+			std::vector<std::string> getCgiEnvp() const;
 
 			const std::string& getMethod() const;
 			const std::string& getUri() const;
@@ -41,7 +44,6 @@ namespace http {
 			std::size_t getContentLength() const;
 			std::optional<std::string> getHeader(Header header) const;
 			const std::vector<std::uint8_t>& getRawBody() const;
-			// MultipartFile getMultipartBody() const;
 			Request::Status getStatus() const;
 
 			Request& setRawBody(

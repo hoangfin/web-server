@@ -14,7 +14,7 @@
 
 namespace http {
 	Connection::Connection(int clientSocket, const ServerConfig& serverConfig)
-		: _clientSocket(clientSocket)
+		: _clientFd(clientSocket)
 		, _serverConfig(serverConfig) {
 	}
 
@@ -24,7 +24,7 @@ namespace http {
 		}
 
 		unsigned char buf[4096];
-		ssize_t bytesRead = recv(_clientSocket, buf, sizeof(buf), MSG_NOSIGNAL);
+		ssize_t bytesRead = recv(_clientFd, buf, sizeof(buf), MSG_NOSIGNAL);
 
 		if (bytesRead == 0) {
 			this->close();
@@ -43,7 +43,7 @@ namespace http {
 			_processBuffer();
 
 			if (_request.getStatus() == Request::Status::BAD || _request.getStatus() == Request::Status::COMPLETE) {
-				_queue.emplace(std::move(_request), Response(_clientSocket));
+				_queue.emplace(std::move(_request), Response(_clientFd));
 				_request.clear();
 			}
 		}
@@ -83,19 +83,19 @@ namespace http {
 	}
 
 	void Connection::close() {
-		if (_clientSocket == -1) {
+		if (_clientFd == -1) {
 			return;
 		}
 
-		if (::close(_clientSocket) < 0) {
-			std::cerr << "Failed to close socket " << _clientSocket << ": " << strerror(errno) << std::endl;
+		if (::close(_clientFd) < 0) {
+			std::cerr << "Failed to close socket " << _clientFd << ": " << strerror(errno) << std::endl;
 		}
 
-		_clientSocket = -1;
+		_clientFd = -1;
 	}
 
 	bool Connection::isClosed() const {
-		return (_clientSocket == -1);
+		return (_clientFd == -1);
 	}
 
 	bool Connection::isTimedOut() const {
@@ -124,6 +124,10 @@ namespace http {
 
 		auto& pair = _queue.front();
 		return &pair.second;
+	}
+
+	int Connection::getClientFd() const {
+		return _clientFd;
 	}
 
 	void Connection::_processBuffer() {

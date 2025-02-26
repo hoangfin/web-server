@@ -33,7 +33,7 @@ namespace {
 
 				file.write(reinterpret_cast<const char*>(element.rawData.data()), element.rawData.size());
 				file.close();
-				responseMessage += "File '" + element.fileName + "' uploaded successfully\n";
+				responseMessage += "File '" + element.fileName + "' uploaded successfully\r\n";
 			} catch (const std::exception& e) {
 				res.setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, rootPath / "500.html");
 				return;
@@ -63,6 +63,7 @@ void Router::del(Handler handler) {
 	_routes["DELETE"] = handler;
 }
 
+
 const Location* Router::findBestMatchingLocation(const string& url) const {
 	const Location* bestMatch = nullptr;
 	size_t longestMatch = 0;
@@ -72,6 +73,7 @@ const Location* Router::findBestMatchingLocation(const string& url) const {
 			longestMatch = path.length();
 		}
 	}
+	std::cout << "Best matching location: " << bestMatch->path << std::endl;
 	return bestMatch;
 }
 
@@ -191,24 +193,88 @@ void handleDeleteRequest(const Location& loc, const string& requestPath, Request
 	}
 }
 
+bool hasRequiredMethods(const std::vector<std::string>& methods) {
+    std::vector<std::string> requiredMethods = {"GET", "POST"};
+    return std::all_of(requiredMethods.begin(), requiredMethods.end(), [&methods](const std::string& method) {
+        return std::find(methods.begin(), methods.end(), method) != methods.end();
+    });
+}
+
+bool Router::isCGI(const Location& location, const std::string& requestPath) const {
+	std::cout << "Checking for CGI" << std::endl;
+    // 1. Check if CGI is enabled in this location
+    if (location.cgiExtension.empty()) {
+		std::cout << "CGI extension is empty" << std::endl;
+        return false;
+    }
+
+    // 2. Extract file extension from request path
+    size_t dotPos = requestPath.find_last_of('.');
+    if (dotPos == std::string::npos) {
+		std::cout << "No file extension found" << std::endl;
+        return false;  // No file extension found
+    }
+
+    std::string ext = requestPath.substr(dotPos + 1);
+	std::cout << "File extension: " << ext << std::endl;
+
+    // 3. Check if the file extension is in the cgiExtension vector
+    bool isCgiExtension = false;
+    for (const auto& cgiExt : location.cgiExtension) {
+        if (ext == cgiExt) {
+            isCgiExtension = true;
+            break;
+        }
+    }
+
+    if (!isCgiExtension) {
+        std::cout << "File extension is not a valid CGI script type" << std::endl;
+        return false;  // File extension is not a valid CGI script type
+    }
+
+    // 4. Compute the full path of the script
+    fs::path scriptPath = location.root / requestPath.substr(location.path.size());
+	std::cout << "Script path: " << scriptPath << std::endl;
+    // 5. Check if the requested file exists and is executable
+    if (!fs::exists(scriptPath) || !fs::is_regular_file(scriptPath)) {
+		std::cout << "Script does not exist or is not a regular file" << std::endl;
+        return false;
+    }
+
+    // 6. Check if the file has execute permissions for the owner
+    fs::perms permissions = fs::status(scriptPath).permissions();
+    if ((permissions & fs::perms::owner_exec) == fs::perms::none) {
+		std::cout << "Script does not have execute permissions" << std::endl;
+        return false;
+    }
+	std::cout << "CGI detected and set to true" << std::endl;
+    return true;
+}
+
+
 // Hander function to handle requests based on the method and matching location
 void Router::handle(Request& request, Response& response) {
+	std::cout << "handle(): " << request.getUri() << response.getClientSocket() << std::endl;
 	if (request.getStatus() == Request::Status::BAD) {
 		response.setFile(StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
 		return;
 	}
 
-	requestPath = request.getUrl().path;
-	requestPath = utils::lowerCase(requestPath);
-	if (!requestPath.empty() && !requestPath.ends_with('/')) {
-		requestPath = requestPath + "/";
+	// Get the request path and normalize it
+	std::string requestPath = utils::lowerCase(request.getUrl().path);
+	std::cout << "Request path: " << requestPath << std::endl;
+	// Ensure directory paths have a trailing slash, but files do not
+	if (!requestPath.empty() && requestPath.back() != '/' && !fs::path(requestPath).has_extension()) {
+		requestPath += "/";
 	}
 
+	// Validate the request path
 	if (!utils::isValidPath(requestPath)) {
 		response.setFile(StatusCode::BAD_REQUEST_400, _serverConfig.errorPages[400]);
 		return;
 	}
 
+	// Find the best matching location
 	const Location* location = findBestMatchingLocation(requestPath);
 	if (!location) {
 		response.setFile(StatusCode::NOT_FOUND_404, _serverConfig.errorPages[404]);
@@ -218,6 +284,17 @@ void Router::handle(Request& request, Response& response) {
 	// Check for redirect
 	if (!location->returnUrl.empty()) {
 		handleRedirectRequest(*location, response, request);
+		return;
+	}
+
+	if (isCGI(*location, requestPath)) {
+		std::cout << YELLOW "CGI request detected" RESET << std::endl;
+		if (_cgiHandler) {  // Ensure handler is set
+			_cgiHandler(*location, requestPath, request, response);
+		} else {
+			std::cerr << "[ERROR] CGI Handler is not registered!" << std::endl;
+			response.setFile(StatusCode::INTERNAL_SERVER_ERROR_500, _serverConfig.errorPages[500]);
+		}
 		return;
 	}
 

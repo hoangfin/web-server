@@ -16,7 +16,7 @@ namespace http {
 			Connection(const Connection&) = default;
 			~Connection() = default;
 
-			Connection& operator=(const Connection&) = default;
+			Connection& operator=(const Connection&) = delete;
 
 			void read();
 			bool sendResponse();
@@ -28,8 +28,10 @@ namespace http {
 			Request* getRequest();
 			Response* getResponse();
 
+			int getClientFd() const;
+
 		private:
-			int _clientSocket;
+			int _clientFd;
 			const ServerConfig& _serverConfig;
 			Request _request { Request::Status::PENDING };
 			std::vector<std::uint8_t> _buffer;

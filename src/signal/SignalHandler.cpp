@@ -1,8 +1,10 @@
 #include "SignalHandle.hpp"
 
+volatile sig_atomic_t isInterrupted = 0;
+
 void handleSigInt(int sig){
 	(void)sig;
-	sigintReceived = 1;
+	isInterrupted = 1;
 }
 
 void handleSignals(){

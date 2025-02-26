@@ -4,6 +4,8 @@
 #include <memory>
 #include <unordered_map>
 #include <filesystem>
+#include <functional>
+
 #include "constants.hpp"
 #include "utils/Payload.hpp"
 

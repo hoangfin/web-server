@@ -132,7 +132,12 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 			currentLocation.methods = methods;
 		}},
 		{"cgi_extension", [&](const string &value) {
-			currentLocation.cgiExtension.push_back(value);
+			std::string extension = value;
+			if (extension[0] == '.') {
+				extension = extension.substr(1);  // Remove leading dot
+			}
+			currentLocation.cgiExtension.push_back(extension);
+			std::cout << "CGI extension: " << extension << std::endl;
 		}},
 		{"return", [&](const string &value) {
 			if (!currentLocation.returnUrl.empty()) {
@@ -178,6 +183,6 @@ void ConfigParser::parseConfig(const string &filename, Config& config) {
 Config ConfigParser::load() {
 	Config config;
 	parseConfig(filePath, config);
-	utils::printConfig(config); // For testing
+	//utils::printConfig(config); // For testing
 	return config;
 }

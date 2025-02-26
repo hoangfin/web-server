@@ -29,8 +29,8 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 					$(INCLUDES)/http/Request.hpp \
 					$(INCLUDES)/http/Response.hpp \
 					$(INCLUDES)/http/utils.hpp \
-					$(INCLUDES)/Server.hpp
-
+					$(INCLUDES)/Server.hpp \
+					$(INCLUDES)/SignalHandle.hpp
  # Add more headers here
 
 OBJ_DIR			=	obj
@@ -49,11 +49,8 @@ SRCS			=	main.cpp \
 					Payload.cpp \
 					socket.cpp \
 					StringPayload.cpp \
-					Router.cpp
-#SignalHandler.cpp
-#Server.cpp
-
-# SignalHandler.cpp \
+					Router.cpp \
+					SignalHandler.cpp
 
 OBJECTS		:=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 

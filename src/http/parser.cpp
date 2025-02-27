@@ -1,5 +1,6 @@
 #include <regex>
 #include <ranges>
+#include <sstream>
 
 #include "http/parser.hpp"
 #include "utils/common.hpp"

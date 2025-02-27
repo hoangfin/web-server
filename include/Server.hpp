@@ -29,7 +29,7 @@ class Server {
 		~Server();
 
 		Server(Server&&) noexcept = default;
-		Server& operator=(Server&&) noexcept = default;
+		Server& operator=(Server&&) noexcept = delete;
 
 		void addRouterHandlers();
 		void closeConnection(http::Connection& con);

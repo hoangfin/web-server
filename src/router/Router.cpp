@@ -85,6 +85,13 @@ void Router::handle(Request& request, Response& response) {
 	// Find the handler for the requested http method
 	const auto it = _routes.find(request.getMethod());
 
+	// Check if the method is allowed via the location config
+	const auto it2 = std::find(location->methods.begin(), location->methods.end(), request.getMethod());
+	if (it2 == location->methods.end()) {
+		response.setFile(StatusCode::METHOD_NOT_ALLOWED_405, _serverConfig.errorPages[405]);
+		return;
+	}
+
 	// Matched a route
 	if (it != _routes.end()) {
 		try {

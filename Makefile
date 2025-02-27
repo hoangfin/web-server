@@ -50,6 +50,9 @@ SRCS			=	main.cpp \
 					socket.cpp \
 					StringPayload.cpp \
 					Router.cpp \
+					Handlers.cpp \
+					IsCGI.cpp \
+					LocationMapper.cpp \
 					SignalHandler.cpp
 
 OBJECTS		:=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
@@ -62,7 +65,8 @@ vpath %.cpp	$(SRC_DIR) \
 			$(SRC_DIR)/parser \
 			$(SRC_DIR)/server \
 			$(SRC_DIR)/signal \
-			$(SRC_DIR)/utils
+			$(SRC_DIR)/utils \
+			$(SRC_DIR)/router
 
 # Add more paths here
 

@@ -23,7 +23,7 @@ using std::endl;
 namespace fs = std::filesystem;
 
 namespace utils {
-	std::string generate_random_string() {
+	string generate_random_string() {
 		auto now = std::chrono::system_clock::now();
 		auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 
@@ -134,7 +134,7 @@ namespace utils {
 		});
 		return str;
 	}
-	void closeFDs(const std::vector<int>& serverFds) {
+	void closeFDs(const vector<int>& serverFds) {
     for (int fd : serverFds)
         close(fd);
 	}
@@ -251,10 +251,29 @@ namespace utils {
 			}
 		}
 		// Check for directory traversal sequences like "/../" or "/.."
-		if (path == "/.." || path.string().find("/../") != std::string::npos || path.string().ends_with("/..")) {
+		if (path == "/.." || path.string().find("/../") != string::npos || path.string().ends_with("/..")) {
 			return false;
 		}
 		return true;
+	}
+
+	fs::path computeFilePath(const Location& loc, const string& requestPath) {
+		return loc.root / requestPath.substr(loc.path.size());
+	}
+
+	string getFileExtension(const string& filePath) {
+		size_t dotPos = filePath.find_last_of('.');
+		if (dotPos == string::npos) {
+			return "";
+		}
+		return filePath.substr(dotPos + 1);
+	}
+
+	bool hasRequiredMethods(const std::vector<std::string>& methods) {
+		std::vector<std::string> requiredMethods = {"GET", "POST"};
+		return std::all_of(requiredMethods.begin(), requiredMethods.end(), [&methods](const std::string& method) {
+			return std::find(methods.begin(), methods.end(), method) != methods.end();
+		});
 	}
 
 	// FOR TESTING

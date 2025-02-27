@@ -50,6 +50,10 @@ namespace utils {
 		return std::search(begin, end, delimiter.begin(), delimiter.end());
 	}
 
+	std::filesystem::path computeFilePath(const Location& loc, const std::string& requestPath);
+	std::string getFileExtension(const std::string& filePath);
+	bool hasRequiredMethods(const std::vector<std::string>& methods);
+	
 	// FOR TESTING
 	void printRequest(const http::Request& request);
 	void printServerConfig(const ServerConfig& server);

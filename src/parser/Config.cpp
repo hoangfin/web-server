@@ -137,7 +137,6 @@ void ConfigParser::parseLocation(const string &line, Location &currentLocation) 
 				extension = extension.substr(1);  // Remove leading dot
 			}
 			currentLocation.cgiExtension.push_back(extension);
-			std::cout << "CGI extension: " << extension << std::endl;
 		}},
 		{"return", [&](const string &value) {
 			if (!currentLocation.returnUrl.empty()) {

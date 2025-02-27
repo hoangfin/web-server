@@ -27,6 +27,7 @@ class Router {
 		void get(Handler handler);
 		void post(Handler handler);
 		void del(Handler handler);
+
 		void setCgiHandler(Handler handler) {
 			_cgiHandler = handler;
 		}
@@ -35,6 +36,7 @@ class Router {
 		void addLocations(const ServerConfig& serverConfig);
 		bool isCGI(const Location& loc, const std::string& requestPath) const;
 
+		void handleRedirectRequest(const Location& loc, http::Response& res, http::Request& req);
 	private:
 		ServerConfig _serverConfig;
 		std::string requestPath;

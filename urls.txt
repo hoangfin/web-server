@@ -2,7 +2,7 @@ http://localhost:8081/
 http://localhost:8081/nonexistent
 http://localhost:5002/
 http://localhost:5002/nonexistent
-http://localhost:3000/
+http://localhost:3000/ -> redirect to localhost::8081/
 http://localhost:3000/static/
 http://localhost:3000/uploads/
 

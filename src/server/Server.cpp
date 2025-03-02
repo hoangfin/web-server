@@ -27,6 +27,10 @@ void Server::addRouterHandlers() {
 	});
 }
 
+void Server::onShutdown(std::function<void()> shutdownHandler) {
+	_shutdownHandler = shutdownHandler;
+}
+
 void Server::closeConnection(http::Connection& con) {
 	int clientFd = con.getClientFd();
 	con.close();
@@ -58,6 +62,7 @@ void Server::process(const int fd, short& events, const short revents) {
 		int clientFd = ::accept(fd, (struct sockaddr*)&clientAddr, &addrLen);
 
 		if (clientFd >= 0) {
+			std::cout << "clientFd " << fd << " has connected" << std::endl;
 			connections.emplace(clientFd, http::Connection(clientFd, _serverConfig));
 		}
 
@@ -120,21 +125,39 @@ void Server::_processWorkerProcess(WorkerProcess& process, const short revents) 
 		return;
 	}
 
+	bool hasError = false;
+
 	if (revents & POLLIN) {
 		unsigned char buffer[4096];
 		ssize_t bytesRead = ::read(process.pipeFds[0], buffer, sizeof(buffer));
 
 		if (bytesRead > 0) {
-			res->appendBody(buffer, bytesRead);
+			std::string_view errorMarker("EXECVE_ERROR_MARKER");
+			auto it = std::search(buffer, buffer + bytesRead, errorMarker.begin(), errorMarker.end());
+
+			if (it != (buffer + bytesRead)) {
+				hasError = true;
+				std::cerr << "CGI failed" << std::endl;
+			} else {
+				res->appendBody(buffer, bytesRead);
+			}
 		}
 	}
 
 	if (revents & POLLHUP) {
-		// Make sure pipe has data left
-		res->setStatusCode(http::StatusCode::OK_200)
-			.setHeader(http::Header::CONTENT_TYPE, http::getMimeType("txt"))
-			.setHeader(http::Header::CONTENT_LENGTH, std::to_string(res->getBody()->getSizeInBytes()))
-			.build();
+		if (hasError) {
+			res->clear().setFile(http::StatusCode::INTERNAL_SERVER_ERROR_500, process.rootPath / "500.html");
+		} else {
+			auto* cgiPayload = dynamic_cast<utils::CgiPayload*>(res->getBody().get());
+
+			for (auto& [name, value] : cgiPayload->headerFields()) {
+				res->setHeader(name, value);
+			}
+
+			res->setStatusCode(http::StatusCode::OK_200)
+				.setHeader(http::Header::CONTENT_LENGTH, std::to_string(cgiPayload->size()))
+				.build();
+		}
 
 		::close(process.pipeFds[0]);
 		process.pipeFds[0] = -1;
@@ -157,15 +180,8 @@ void Server::_handleCGI(
 	const http::Request& request,
 	http::Response& response
 ) {
-	// (void)loc;
-	// (void)requestPath;
 	(void)request;
 	std::string scriptPath = loc.root / requestPath.substr(loc.path.size());
-	// Validate CGI script
-	// if (!fs::exists(scriptPath) || !fs::is_regular_file(scriptPath)) {
-	// 	response.setFile(StatusCode::NOT_FOUND_404, loc.root / "404.html");
-	// 	return;
-	// }
 
 	WorkerProcess process;
 
@@ -191,29 +207,27 @@ void Server::_handleCGI(
 		::dup2(process.pipeFds[1], STDOUT_FILENO);
 		::close(process.pipeFds[1]);
 
-		// auto envp = request.getCgiEnvp();
-		std::string interpreter("/usr/bin/python3");
+		std::string interpreter("/usr/bin/python1");
 		char* argv[] = { interpreter.data(), scriptPath.data(), NULL };
+		char** envp = request.getCgiEnvp();
+		::execve(argv[0], argv, envp);
 
-		::execve(argv[0], argv, NULL);
-		std::cerr << "Error execve()";
-		::exit(1);
+		for (std::size_t i = 0; envp[i] != nullptr; i++) {
+			delete[] envp[i];
+		}
+
+		delete[] envp;
+
+		std::cout << "EXECVE_ERROR_MARKER";
+		std::flush(std::cout);
+		_shutdownHandler();
+		exit(1);
 	}
 
 	::close(process.pipeFds[1]);
 	process.pipeFds[1] = -1;
-	response.setBody(std::make_unique<utils::StringPayload>(response.getClientSocket(), ""));
+	response.setBody(std::make_unique<utils::CgiPayload>());
 	workerProcesses.emplace(process.pipeFds[0], process);
-}
-
-Server::~Server() {
-	_cleanup();
-}
-
-void Server::_cleanup() {
-	for (auto& [fd, con] : connections) {
-		con.close();
-	}
 }
 
 void Server::shutdown() {

@@ -4,23 +4,21 @@
 #include "Error.hpp"
 
 namespace utils {
-	StringPayload::StringPayload(int socket, const std::string& message) : Payload(socket), _message(message) {
+	StringPayload::StringPayload(const std::string& message) : Payload(), _message(message) {
 		_totalBytes = message.size();
 	}
 
-	void StringPayload::send() {
+	void StringPayload::send(int fd) {
 		if (Payload::_bytesSent >= _totalBytes) {
 			return;
 		}
 
-		const ssize_t bytesSent = ::send(
-			_socket,
-			_message.data() + Payload::_bytesSent,
-			_totalBytes - Payload::_bytesSent,
-			MSG_NOSIGNAL
-		);
+		const char* buf = _message.data() + Payload::_bytesSent;
+		const std::size_t size = _totalBytes - Payload::_bytesSent;
 
-		if (bytesSent >= 0) {
+		const ssize_t bytesSent = ::send(fd, buf, size, MSG_NOSIGNAL);
+
+		if (bytesSent > 0) {
 			Payload::_bytesSent += static_cast<std::size_t>(bytesSent);
 		}
 	}

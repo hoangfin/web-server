@@ -34,7 +34,7 @@ namespace http {
 			bool isChunkEncoding() const;
 			bool isMultipart() const;
 
-			std::vector<std::string> getCgiEnvp() const;
+			char** getCgiEnvp() const;
 
 			const std::string& getMethod() const;
 			const std::string& getUri() const;

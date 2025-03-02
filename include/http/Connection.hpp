@@ -31,12 +31,17 @@ namespace http {
 			int getClientFd() const;
 
 		private:
+			using TimePoint = std::chrono::steady_clock::time_point;
+
 			int _clientFd;
 			const ServerConfig& _serverConfig;
 			Request _request { Request::Status::PENDING };
 			std::vector<std::uint8_t> _buffer;
 			std::queue<std::pair<Request, Response>> _queue;
-			std::chrono::steady_clock::time_point _lastReceived;
+			TimePoint _lastReceived;
+			TimePoint _requestHandleStart { TimePoint::min() };
+			TimePoint _responseHandleStart { TimePoint::min() };
+			TimePoint _responseDeliveryStart { TimePoint::min() };
 
 			void _processBuffer();
 	};

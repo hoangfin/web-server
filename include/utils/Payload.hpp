@@ -4,41 +4,65 @@
 #include <string.h>
 #include <filesystem>
 #include <fstream>
+#include <vector>
+#include <unordered_map>
 
 namespace utils {
 	class Payload {
 		public:
-			explicit Payload(int socket);
+			Payload() = default;
 			Payload(const Payload&) = default;
 			Payload(Payload &&) noexcept = default;
 			virtual ~Payload() = default;
 
 			Payload& operator=(const Payload&) = default;
 
-			virtual void send() = 0;
-			virtual void append(const std::uint8_t* data, size_t size) = 0;
+			virtual void send(int fd) = 0;
+
+			virtual void append(const std::uint8_t* data, size_t size);
+
 			virtual std::string toString() const = 0;
 			virtual std::unique_ptr<Payload> clone() const = 0;
 
 			bool isSent() const;
-			std::size_t getSizeInBytes() const;
+			std::size_t size() const;
 
 		protected:
-			int _socket;
 			std::size_t _totalBytes { 0 };
 			std::size_t _bytesSent { 0 };
 	};
 
+	class CgiPayload : public Payload {
+		public:
+			CgiPayload() = default;
+			CgiPayload(const CgiPayload&) = default;
+			CgiPayload(CgiPayload &&) noexcept = default;
+			~CgiPayload() = default;
+
+			CgiPayload& operator=(const CgiPayload&) = default;
+
+			void send(int fd) override;
+			void append(const std::uint8_t* data, size_t size) override;
+			std::string toString() const override;
+			std::unique_ptr<Payload> clone() const override;
+
+			const std::unordered_map<std::string, std::string>& headerFields() const;
+
+		private:
+			std::vector<std::uint8_t> _buffer;
+			std::unordered_map<std::string, std::string> _headerFields;
+	};
+
 	class StringPayload : public Payload {
 		public:
-			StringPayload(int socket, const std::string &message);
+			StringPayload(const std::string &message);
 			StringPayload(const StringPayload&) = default;
 			StringPayload(StringPayload &&) noexcept = default;
 			~StringPayload() = default;
 
 			StringPayload& operator=(const StringPayload&) = default;
 
-			void send() override;
+			void send(int fd) override;
 			void append(const std::uint8_t* data, size_t size) override;
 			std::string toString() const override;
 			std::unique_ptr<Payload> clone() const override;
@@ -51,15 +75,14 @@ namespace utils {
 
 	class FilePayload : public Payload {
 		public:
-			FilePayload(int socket, const std::filesystem::path &filePath);
+			FilePayload(const std::filesystem::path &filePath);
 			FilePayload(const FilePayload& other);
 			FilePayload(FilePayload &&) noexcept = default;
 			~FilePayload() = default;
 
 			FilePayload& operator=(const FilePayload& other);
 
-			void send() override;
-			void append(const std::uint8_t* data, size_t size) override;
+			void send(int fd) override;
 			std::string toString() const override;
 			std::unique_ptr<Payload> clone() const override;
 

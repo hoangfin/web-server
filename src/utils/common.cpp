@@ -276,71 +276,96 @@ namespace utils {
 		});
 	}
 
+	void parseHeaderFields(
+		std::unordered_map<std::string, std::string>& headerFields,
+		std::vector<std::uint8_t>& buffer
+	) {
+		std::string_view emptyLine("\r\n\r\n");
+		auto it = std::search(buffer.begin(), buffer.end(), emptyLine.begin(), emptyLine.end());
+
+		if (it == buffer.end()) {
+			return;
+		}
+
+		std::string rawHeader(buffer.begin(), it + 4);
+		std::istringstream istream(rawHeader);
+		std::string line;
+
+		while (std::getline(istream, line) && line != "\r") {
+			std::size_t colonPos = line.find(":");
+			std::string name = line.substr(0, colonPos);
+			std::string value = trimSpace(line.substr(colonPos + 1));
+			headerFields[name] = value;
+		}
+
+		buffer.erase(buffer.begin(), it + 4);
+	}
+
 	// FOR TESTING
 
-	void printRequest(const http::Request& request) {
-		cout
-			<< "Request method: " << request.getMethod() << endl
-			<< "Request URL_scheme: " << request.getUrl().scheme << endl
-			<< "Request URL_user: " << request.getUrl().user << endl
-			<< "Request URL_password: " << request.getUrl().password << endl
-			<< "Request URL_host: " << request.getUrl().host << endl
-			<< "Request URL_port: " << request.getUrl().port << endl
-			<< "Request URL_path: " << request.getUrl().path << endl
-			<< "Request URL_query: " << request.getUrl().query << endl
-			<< "Request URL_fragment: " << request.getUrl().fragment << endl
-			<< "Request version: " << request.getVersion() << endl
-			<< "Request body size: " << request.getRawBody().size() << endl;
-	}
+	// void printRequest(const http::Request& request) {
+	// 	cout
+	// 		<< "Request method: " << request.getMethod() << endl
+	// 		<< "Request URL_scheme: " << request.getUrl().scheme << endl
+	// 		<< "Request URL_user: " << request.getUrl().user << endl
+	// 		<< "Request URL_password: " << request.getUrl().password << endl
+	// 		<< "Request URL_host: " << request.getUrl().host << endl
+	// 		<< "Request URL_port: " << request.getUrl().port << endl
+	// 		<< "Request URL_path: " << request.getUrl().path << endl
+	// 		<< "Request URL_query: " << request.getUrl().query << endl
+	// 		<< "Request URL_fragment: " << request.getUrl().fragment << endl
+	// 		<< "Request version: " << request.getVersion() << endl
+	// 		<< "Request body size: " << request.getRawBody().size() << endl;
+	// }
 
-	void printServerConfig(const ServerConfig& server) {
-		cout
-			<< YELLOW "Server Config: " RESET << server.serverName << endl
-			<< "Host: " << server.host << endl;
-		for (const auto& port : server.ports) {
-			cout << "Port: " << port << endl;
-		}
-		cout << "Server Name: " << server.serverName << endl
-			<< "Error Pages: " << endl;
-		for (const auto& [code, path] : server.errorPages) {
-			cout << code << ": " << path << " " << endl;
-		}
-		cout << endl;
-		cout << "Client Max Body Size: " << server.clientMaxBodySize << endl;
+	// void printServerConfig(const ServerConfig& server) {
+	// 	cout
+	// 		<< YELLOW "Server Config: " RESET << server.serverName << endl
+	// 		<< "Host: " << server.host << endl;
+	// 	for (const auto& port : server.ports) {
+	// 		cout << "Port: " << port << endl;
+	// 	}
+	// 	cout << "Server Name: " << server.serverName << endl
+	// 		<< "Error Pages: " << endl;
+	// 	for (const auto& [code, path] : server.errorPages) {
+	// 		cout << code << ": " << path << " " << endl;
+	// 	}
+	// 	cout << endl;
+	// 	cout << "Client Max Body Size: " << server.clientMaxBodySize << endl;
 
-		for (const auto& location : server.locations) {
-			cout
-				<< "Location Path: " << location.path << endl
-				<< "Root: " << location.root << endl
-				<< "Index: " << location.index << endl
-				<< "Autoindex: " << (location.isAutoIndex ? "on" : "off") << endl
-				<< "Methods: ";
-			for (const auto& method : location.methods) {
-				cout << method << " ";
-			}
-			cout << endl;
-			if (!location.cgiExtension.empty()) {
-				cout << "CGI Extension: ";
-				for (const auto& ext : location.cgiExtension) {
-					cout << ext << " ";
-				}
-				cout << endl;
-			}
-			if (!location.returnUrl.empty()) {
-				cout << "Return URL: ";
-				for (const auto& part : location.returnUrl) {
-					cout << part << " ";
-				}
-				cout << endl;
-			}
-			cout << endl;
-		}
-		cout << "----------------------------------------" << endl;
-	}
+	// 	for (const auto& location : server.locations) {
+	// 		cout
+	// 			<< "Location Path: " << location.path << endl
+	// 			<< "Root: " << location.root << endl
+	// 			<< "Index: " << location.index << endl
+	// 			<< "Autoindex: " << (location.isAutoIndex ? "on" : "off") << endl
+	// 			<< "Methods: ";
+	// 		for (const auto& method : location.methods) {
+	// 			cout << method << " ";
+	// 		}
+	// 		cout << endl;
+	// 		if (!location.cgiExtension.empty()) {
+	// 			cout << "CGI Extension: ";
+	// 			for (const auto& ext : location.cgiExtension) {
+	// 				cout << ext << " ";
+	// 			}
+	// 			cout << endl;
+	// 		}
+	// 		if (!location.returnUrl.empty()) {
+	// 			cout << "Return URL: ";
+	// 			for (const auto& part : location.returnUrl) {
+	// 				cout << part << " ";
+	// 			}
+	// 			cout << endl;
+	// 		}
+	// 		cout << endl;
+	// 	}
+	// 	cout << "----------------------------------------" << endl;
+	// }
 
-	void printConfig(const Config& config) {
-		for (const auto& server : config.servers) {
-			printServerConfig(server);
-		}
-	}
+	// void printConfig(const Config& config) {
+	// 	for (const auto& server : config.servers) {
+	// 		printServerConfig(server);
+	// 	}
+	// }
 } // namespace utils

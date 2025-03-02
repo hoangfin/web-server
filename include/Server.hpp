@@ -26,12 +26,13 @@ class Server {
 	public:
 		Server() = delete;
 		Server(const ServerConfig& serverConfig);
-		~Server();
+		~Server() = default;
 
 		Server(Server&&) noexcept = default;
 		Server& operator=(Server&&) noexcept = delete;
 
 		void addRouterHandlers();
+		void onShutdown(std::function<void()> shutdownHandler);
 		void closeConnection(http::Connection& con);
 		void process(const int fd, short& events, const short revents);
 
@@ -45,6 +46,7 @@ class Server {
 		const ServerConfig& _serverConfig;
 		Router _router;
 		std::unordered_set<int> _serverFds;
+		std::function<void()> _shutdownHandler;
 
 		void _handleCGI(
 			const Location& loc,
@@ -55,5 +57,4 @@ class Server {
 
 		void _processConnection(http::Connection& con, short& events, const short revents);
 		void _processWorkerProcess(WorkerProcess& process, const short revents);
-		void _cleanup();
 };

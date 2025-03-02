@@ -26,7 +26,7 @@ namespace http {
 			Response& operator=(const Response& other);
 
 			bool send();
-
+			void onStatusChanged(std::function<void(Response::Status status)> handler);
 			void build();
 
 			int getClientSocket() const;
@@ -39,6 +39,7 @@ namespace http {
 			Response& setStatus(const Status status);
 			Response& setStatusCode(const StatusCode statusCode);
 			Response& setHeader(Header header, const std::string& value);
+			Response& setHeader(const std::string& headerName, const std::string& headerValue);
 			Response& setBody(std::unique_ptr<utils::Payload> body);
 			Response& appendBody(const std::uint8_t* data, size_t size);
 
@@ -49,8 +50,9 @@ namespace http {
 			int _clientSocket;
 			Status _status { Status::PENDING };
 			StatusCode _statusCode { StatusCode::NONE_0 };
-			std::unordered_map<std::string, std::string> _headerByName;
+			std::unordered_map<std::string, std::string> _headerFields { {"Content-Type", "application/octet-stream"} };
 			utils::StringPayload _header;
 			std::unique_ptr<utils::Payload> _body;
+			std::vector<std::function<void(Response::Status status)>> _handlers;
 	};
 }

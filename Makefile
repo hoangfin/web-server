@@ -36,24 +36,31 @@ M_HEADERS		=	$(INCLUDES)/Config.hpp \
 OBJ_DIR			=	obj
 SRC_DIR			=	src
 SRCS			=	main.cpp \
+					\
 					Connection.cpp \
 					parser.cpp \
 					Request.cpp \
 					Response.cpp \
 					utils.cpp \
+					\
 					Config.cpp \
+					\
+					Handlers.cpp \
+					IsCGI.cpp \
+					LocationMapper.cpp \
+					Router.cpp \
+					\
 					Server.cpp \
 					ServerManager.cpp \
+					\
+					SignalHandler.cpp \
+					\
+					CgiPayload.cpp \
 					common.cpp \
 					FilePayload.cpp \
 					Payload.cpp \
 					socket.cpp \
-					StringPayload.cpp \
-					Router.cpp \
-					Handlers.cpp \
-					IsCGI.cpp \
-					LocationMapper.cpp \
-					SignalHandler.cpp
+					StringPayload.cpp
 
 OBJECTS		:=	$(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 

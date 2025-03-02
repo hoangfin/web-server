@@ -7,16 +7,13 @@
 #include "http/utils.hpp"
 
 namespace http {
-	Response::Response(int clientSocket)
-		: _clientSocket(clientSocket)
-		, _header(utils::StringPayload(clientSocket, "")) {
-	}
+	Response::Response(int clientSocket) : _clientSocket(clientSocket) , _header(utils::StringPayload("")) {}
 
 	Response::Response(const Response& other)
 		: _clientSocket(other._clientSocket)
 		, _status(other._status)
 		, _statusCode(other._statusCode)
-		, _headerByName(other._headerByName)
+		, _headerFields(other._headerFields)
 		, _header(other._header)
 		, _body(other._body ? other._body->clone() : nullptr) {
 	}
@@ -26,7 +23,7 @@ namespace http {
 			_clientSocket = other._clientSocket;
 			_status = other._status;
 			_statusCode = other._statusCode;
-			_headerByName = other._headerByName;
+			_headerFields = other._headerFields;
 			_header = other._header;
 			_body = other._body ? other._body->clone() : nullptr;
 		}
@@ -36,7 +33,7 @@ namespace http {
 
 	bool Response::send() {
 		if (!_header.isSent()) {
-			_header.send();
+			_header.send(_clientSocket);
 			return false;
 		}
 
@@ -44,7 +41,7 @@ namespace http {
 			return true;
 		}
 
-		_body->send();
+		_body->send(_clientSocket);
 
 		if (_body->isSent()) {
 			return true;
@@ -61,13 +58,17 @@ namespace http {
 			<< static_cast<std::uint16_t>(_statusCode) << " "
 			<< stringOf(_statusCode) << "\r\n";
 
-		for (const auto& [name, value] : _headerByName) {
+		for (const auto& [name, value] : _headerFields) {
 			ostream << name << ": " << value << "\r\n";
 		}
 
 		ostream << "\r\n";
 		_header.setMessage(ostream.str());
 		setStatus(Response::Status::READY);
+	}
+
+	void Response::onStatusChanged(std::function<void(Response::Status status)> handler) {
+		_handlers.push_back(handler);
 	}
 
 	int Response::getClientSocket() const {
@@ -92,14 +93,20 @@ namespace http {
 
 	Response& Response::clear() {
 		_statusCode = StatusCode::NONE_0;
-		_headerByName.clear();
+		_headerFields.clear();
 		_header.setMessage("");
 		_body.reset();
+		_handlers.clear();
 		return *this;
 	}
 
 	Response& Response::setStatus(const Status status) {
 		_status = status;
+
+		for (const auto& handler : _handlers) {
+			handler(_status);
+		}
+
 		return *this;
 	}
 
@@ -109,7 +116,12 @@ namespace http {
 	}
 
 	Response& Response::setHeader(Header header, const std::string& value) {
-		_headerByName[stringOf(header)] = value;
+		_headerFields[stringOf(header)] = value;
+		return *this;
+	}
+
+	Response& Response::setHeader(const std::string& headerName, const std::string& headerValue) {
+		_headerFields[headerName] = headerValue;
 		return *this;
 	}
 
@@ -125,9 +137,9 @@ namespace http {
 
 	void Response::setText(StatusCode statusCode, const std::string& text) {
 		setStatusCode(statusCode);
-		setBody(std::make_unique<utils::StringPayload>(_clientSocket, text));
+		setBody(std::make_unique<utils::StringPayload>(text));
 		setHeader(Header::CONTENT_TYPE, getMimeType("txt"));
-		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->getSizeInBytes()));
+		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->size()));
 		build();
 	}
 
@@ -135,9 +147,9 @@ namespace http {
 		std::string ext = filePath.extension().string().erase(0, 1); // Get file extension without '.'
 
 		setStatusCode(statusCode);
-		setBody(std::make_unique<utils::FilePayload>(_clientSocket, filePath));
+		setBody(std::make_unique<utils::FilePayload>(filePath));
 		setHeader(Header::CONTENT_TYPE, getMimeType(ext));
-		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->getSizeInBytes()));
+		setHeader(Header::CONTENT_LENGTH, std::to_string(_body->size()));
 		// setHeader(Header::CACHE_CONTROL, "public, max-age=86400");	// For production mode
 		setHeader(Header::CACHE_CONTROL, "no-store"); 				// For test mode
 		build();

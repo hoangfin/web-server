@@ -27,18 +27,27 @@ namespace http {
 		return (getHeader(Header::CONTENT_TYPE).value_or("").starts_with("multipart/form-data"));
 	}
 
-	std::vector<std::string> Request::getCgiEnvp() const {
-		std::vector<std::string> envp;
+	char** Request::getCgiEnvp() const {
+		std::vector<std::string> vector;
 
-		envp.push_back("REQUEST_METHOD=" + _method);
-		envp.push_back("QUERY_STRING=" + _url.query);
-		envp.push_back("CONTENT_LENGTH=" + getHeader(Header::CONTENT_LENGTH).value_or(""));
-		envp.push_back("CONTENT_TYPE=" + getHeader(Header::CONTENT_TYPE).value_or(""));
-		envp.push_back("SCRIPT_NAME=" + _url.path);
-		// envp.push_back("REMOTE_ADDR=" + The IP address of the client making the request.
-		envp.push_back("SERVER_NAME=" + _url.host);
-		envp.push_back("SERVER_PORT=" + _url.port);
-		envp.push_back("SERVER_PROTOCOL=" + _version);
+		vector.push_back("REQUEST_METHOD=" + _method);
+		vector.push_back("QUERY_STRING=" + _url.query);
+		vector.push_back("CONTENT_LENGTH=" + getHeader(Header::CONTENT_LENGTH).value_or(""));
+		vector.push_back("CONTENT_TYPE=" + getHeader(Header::CONTENT_TYPE).value_or(""));
+		vector.push_back("SCRIPT_NAME=" + _url.path);
+		// vector.push_back("REMOTE_ADDR=" + The IP address of the client making the request.
+		vector.push_back("SERVER_NAME=" + _url.host);
+		vector.push_back("SERVER_PORT=" + _url.port);
+		vector.push_back("SERVER_PROTOCOL=" + _version);
+
+		char **envp = new char*[vector.size() + 1];
+
+		for (std::size_t i = 0; i < vector.size(); i++) {
+			envp[i] = new char[vector[i].size() + 1];
+			std::strcpy(envp[i], vector[i].c_str());
+		}
+
+		envp[vector.size()] = nullptr;
 		return envp;
 	}
 

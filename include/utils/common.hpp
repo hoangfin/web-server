@@ -6,7 +6,7 @@
 #include <initializer_list>
 #include <algorithm>
 #include <iterator>
-#include "http/Request.hpp"
+// #include "http/Request.hpp"
 
 namespace utils {
 	using LineHandler = std::function<void(const std::string&)>;
@@ -53,10 +53,14 @@ namespace utils {
 	std::filesystem::path computeFilePath(const Location& loc, const std::string& requestPath);
 	std::string getFileExtension(const std::string& filePath);
 	bool hasRequiredMethods(const std::vector<std::string>& methods);
-	
+
+	void parseHeaderFields(
+		std::unordered_map<std::string, std::string>& headerFields,
+		std::vector<std::uint8_t>& buffer
+	);
 	// FOR TESTING
-	void printRequest(const http::Request& request);
-	void printServerConfig(const ServerConfig& server);
-	void printConfig(const Config& config);
+	// void printRequest(const http::Request& request);
+	// void printServerConfig(const ServerConfig& server);
+	// void printConfig(const Config& config);
 
 }

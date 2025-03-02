@@ -10,7 +10,11 @@ ServerManager::ServerManager(const Config& config) : _config(config) {
 	for (std::size_t i = 0; i < _config.servers.size(); i++) {
 		const ServerConfig& serverConfig = _config.servers[i];
 		_servers.push_back(Server(serverConfig));
-		_servers.back().addRouterHandlers();
+		Server& server = _servers.back();
+		server.addRouterHandlers();
+		server.onShutdown([this]() {
+			this->shutdown();
+		});
     }
 
 	for (auto& server : _servers) {
@@ -69,11 +73,13 @@ void ServerManager::_updateClientConnections(Server& server) {
 			}
 
 			if (connection.isTimedOut()) {
+				std::cout << "clientFd " << connection.getClientFd() << " has timedout" << std::endl;
 				server.closeConnection(connection);
 			}
 		}
 
 		if (connection.isClosed()) {
+			std::cout << "clientFd " << fd << " has closed" << std::endl;
 			_untrack(fd);
 			it = server.connections.erase(it);
 			continue;
